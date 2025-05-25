@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_profiles: {
+        Row: {
+          address: string | null
+          business_name: string
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           created_at: string | null
@@ -16,6 +51,7 @@ export type Database = {
           name: string
           phone: string
           points_per_visit: number | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -23,6 +59,7 @@ export type Database = {
           name: string
           phone: string
           points_per_visit?: number | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -30,8 +67,41 @@ export type Database = {
           name?: string
           phone?: string
           points_per_visit?: number | null
+          user_id?: string | null
         }
         Relationships: []
+      }
+      customer_profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string
+          id: string
+          phone_number: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          full_name: string
+          id?: string
+          phone_number: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          phone_number?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -39,41 +109,77 @@ export type Database = {
           id: string
           name: string
           phone: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           name: string
           phone: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           name?: string
           phone?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
         }
         Relationships: []
       }
       rewards: {
         Row: {
           business_id: string | null
+          business_profile_id: string | null
+          customer_profile_id: string | null
           id: string
           is_active: boolean | null
           points_required: number
+          reward_date: string | null
+          reward_status: string | null
           title: string
         }
         Insert: {
           business_id?: string | null
+          business_profile_id?: string | null
+          customer_profile_id?: string | null
           id?: string
           is_active?: boolean | null
           points_required: number
+          reward_date?: string | null
+          reward_status?: string | null
           title: string
         }
         Update: {
           business_id?: string | null
+          business_profile_id?: string | null
+          customer_profile_id?: string | null
           id?: string
           is_active?: boolean | null
           points_required?: number
+          reward_date?: string | null
+          reward_status?: string | null
           title?: string
         }
         Relationships: [
@@ -91,26 +197,61 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rewards_business_profile_id_fkey"
+            columns: ["business_profile_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rewards_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      user_roles: {
+        Row: {
+          role: string
+          user_id: string
+        }
+        Insert: {
+          role: string
+          user_id: string
+        }
+        Update: {
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       visits: {
         Row: {
           business_id: string | null
+          business_profile_id: string | null
           customer_id: string | null
+          customer_profile_id: string | null
           id: string
           points_earned: number | null
           visit_date: string | null
         }
         Insert: {
           business_id?: string | null
+          business_profile_id?: string | null
           customer_id?: string | null
+          customer_profile_id?: string | null
           id?: string
           points_earned?: number | null
           visit_date?: string | null
         }
         Update: {
           business_id?: string | null
+          business_profile_id?: string | null
           customer_id?: string | null
+          customer_profile_id?: string | null
           id?: string
           points_earned?: number | null
           visit_date?: string | null
@@ -138,10 +279,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "visits_business_profile_id_fkey"
+            columns: ["business_profile_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "visits_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -151,13 +306,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       get_customer_points: {
         Args: { customer_phone: string; business_uuid: string }
         Returns: number
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "customer" | "business"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -272,6 +431,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["customer", "business"],
+    },
   },
 } as const
