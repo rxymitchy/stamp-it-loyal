@@ -9,6 +9,7 @@ import { Crown, User, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import EmailVerification from "@/components/EmailVerification";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,6 +22,8 @@ const Auth = () => {
   const [contactPhone, setContactPhone] = useState("");
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -34,7 +37,16 @@ const Auth = () => {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // Handle specific email not confirmed error
+          if (error.message.includes('Email not confirmed')) {
+            setPendingEmail(email);
+            setShowEmailVerification(true);
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
 
         // Check if user role matches the selected role
         const { data: profileData } = await supabase
@@ -73,6 +85,14 @@ const Auth = () => {
 
         if (error) throw error;
 
+        if (data.user && !data.user.email_confirmed_at) {
+          // Show email verification screen
+          setPendingEmail(email);
+          setShowEmailVerification(true);
+          setLoading(false);
+          return;
+        }
+
         if (data.user) {
           // Create role-specific profile
           if (role === 'customer') {
@@ -108,6 +128,21 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleBackToAuth = () => {
+    setShowEmailVerification(false);
+    setPendingEmail("");
+    setIsLogin(true); // Switch back to login mode
+  };
+
+  if (showEmailVerification) {
+    return (
+      <EmailVerification
+        email={pendingEmail}
+        onBack={handleBackToAuth}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 flex items-center justify-center p-4">
