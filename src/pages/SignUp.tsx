@@ -33,6 +33,7 @@ const SignUp = () => {
         email,
         password,
         options: {
+          emailRedirectTo: 'https://my-lovable-app.lovable.app/sign-in',
           data: {
             role: role
           }
