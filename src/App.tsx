@@ -6,10 +6,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
+import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import NotFound from "./pages/NotFound";
+import Header from "./components/Header";
 
 const queryClient = new QueryClient();
 
@@ -21,14 +26,19 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/signin" replace />;
   }
   
   if (requiredRole && profile?.role !== requiredRole) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/signin" replace />;
   }
   
-  return <>{children}</>;
+  return (
+    <div>
+      <Header />
+      {children}
+    </div>
+  );
 };
 
 const AppRoutes = () => {
@@ -41,7 +51,18 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <Index />} />
-      <Route path="/auth" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <Auth />} />
+      <Route path="/signin" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <SignIn />} />
+      <Route path="/signup" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <SignUp />} />
+      <Route path="/email-verification" element={<EmailVerificationPage />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/business" 
         element={

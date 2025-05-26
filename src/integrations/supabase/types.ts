@@ -74,23 +74,26 @@ export type Database = {
       customer_profiles: {
         Row: {
           created_at: string | null
-          full_name: string
+          email: string | null
+          full_name: string | null
           id: string
-          phone_number: string
+          phone_number: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
-          full_name: string
+          email?: string | null
+          full_name?: string | null
           id?: string
-          phone_number: string
+          phone_number?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
-          full_name?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
-          phone_number?: string
+          phone_number?: string | null
           user_id?: string
         }
         Relationships: [
@@ -106,23 +109,26 @@ export type Database = {
       customers: {
         Row: {
           created_at: string | null
+          email: string | null
           id: string
-          name: string
-          phone: string
+          name: string | null
+          phone: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
+          email?: string | null
           id?: string
-          name: string
-          phone: string
+          name?: string | null
+          phone?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
+          email?: string | null
           id?: string
-          name?: string
-          phone?: string
+          name?: string | null
+          phone?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -212,21 +218,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_roles: {
-        Row: {
-          role: string
-          user_id: string
-        }
-        Insert: {
-          role: string
-          user_id: string
-        }
-        Update: {
-          role?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       visits: {
         Row: {

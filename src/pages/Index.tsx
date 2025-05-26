@@ -1,80 +1,131 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, Star, Gift, TrendingUp, Users, Building2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Crown, Gift, Star, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50">
-      {/* Hero Section */}
-      <div className="px-4 pt-8 pb-16">
-        <div className="max-w-md mx-auto text-center space-y-6">
-          <div className="animate-fade-in">
-            <Crown className="mx-auto h-16 w-16 text-amber-500 mb-4" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-amber-600 bg-clip-text text-transparent">
-              StampIt
-            </h1>
-            <p className="text-lg text-gray-600 mt-2">
-              Loyalty Rewards Made Simple
-            </p>
+      {/* Header */}
+      <header className="container mx-auto px-4 py-6">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Crown className="h-8 w-8 text-amber-500" />
+            <h1 className="text-2xl font-bold text-gray-900">StampIt</h1>
           </div>
+          <div className="space-x-4">
+            <Link to="/signin">
+              <Button variant="outline">Sign In</Button>
+            </Link>
+            <Link to="/signup">
+              <Button className="bg-gradient-to-r from-purple-600 to-amber-600 hover:from-purple-700 hover:to-amber-700">
+                Sign Up
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
 
-          <Card className="animate-scale-in bg-white/80 backdrop-blur border-0 shadow-xl">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl text-gray-800">Get Started</CardTitle>
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <h2 className="text-5xl font-bold text-gray-900 mb-6">
+          Loyalty Rewards Made Simple
+        </h2>
+        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          Build stronger customer relationships with our digital stamp card system. 
+          Perfect for businesses of all sizes.
+        </p>
+        <div className="space-x-4">
+          <Link to="/signup">
+            <Button size="lg" className="bg-gradient-to-r from-purple-600 to-amber-600 hover:from-purple-700 hover:to-amber-700">
+              Get Started Free
+            </Button>
+          </Link>
+          <Link to="/signin">
+            <Button size="lg" variant="outline">
+              Sign In
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="container mx-auto px-4 py-20">
+        <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          Why Choose StampIt?
+        </h3>
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="bg-white/80 backdrop-blur">
+            <CardHeader>
+              <Gift className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Digital Rewards</CardTitle>
               <CardDescription>
-                Join thousands of businesses and customers earning rewards
+                Replace physical stamp cards with digital loyalty tracking
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="w-full h-12 text-lg bg-gradient-to-r from-purple-600 to-amber-600 hover:from-purple-700 hover:to-amber-700 transform transition-all duration-200 hover:scale-105"
-              >
-                <Users className="mr-2 h-5 w-5" />
-                Sign Up / Sign In
-              </Button>
+            <CardContent>
+              <p className="text-gray-600">
+                No more lost cards or faded stamps. Everything is tracked digitally and securely.
+              </p>
             </CardContent>
           </Card>
 
-          {/* Feature Grid */}
-          <div className="grid grid-cols-2 gap-4 pt-8">
-            <Card className="bg-white/60 backdrop-blur border-0 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <Users className="mx-auto h-8 w-8 text-purple-500 mb-2" />
-                <h3 className="font-semibold text-sm">For Customers</h3>
-                <p className="text-xs text-gray-600">Earn rewards at your favorite places</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-white/60 backdrop-blur border-0 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <Building2 className="mx-auto h-8 w-8 text-amber-500 mb-2" />
-                <h3 className="font-semibold text-sm">For Businesses</h3>
-                <p className="text-xs text-gray-600">Build customer loyalty easily</p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="bg-white/80 backdrop-blur">
+            <CardHeader>
+              <Users className="h-12 w-12 text-amber-600 mb-4" />
+              <CardTitle>Customer Insights</CardTitle>
+              <CardDescription>
+                Understand your customers better with detailed analytics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Track visit patterns, popular times, and customer preferences to grow your business.
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-3 gap-4 pt-8">
-            <div className="text-center">
-              <Star className="mx-auto h-8 w-8 text-amber-500 mb-2" />
-              <p className="text-sm text-gray-600">Track Visits</p>
-            </div>
-            <div className="text-center">
-              <Gift className="mx-auto h-8 w-8 text-purple-500 mb-2" />
-              <p className="text-sm text-gray-600">Reward Loyalty</p>
-            </div>
-            <div className="text-center">
-              <TrendingUp className="mx-auto h-8 w-8 text-green-500 mb-2" />
-              <p className="text-sm text-gray-600">Grow Business</p>
-            </div>
-          </div>
+          <Card className="bg-white/80 backdrop-blur">
+            <CardHeader>
+              <Star className="h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Easy to Use</CardTitle>
+              <CardDescription>
+                Simple setup for businesses, intuitive experience for customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Get started in minutes. No complex training required for you or your staff.
+              </p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <Card className="bg-gradient-to-r from-purple-600 to-amber-600 text-white max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-3xl">Ready to Get Started?</CardTitle>
+            <CardDescription className="text-purple-100">
+              Join thousands of businesses already using StampIt
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/signup">
+              <Button size="lg" variant="secondary" className="bg-white text-purple-600 hover:bg-gray-100">
+                Create Your Account
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Footer */}
+      <footer className="container mx-auto px-4 py-8 text-center text-gray-600">
+        <p>&copy; 2024 StampIt. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
