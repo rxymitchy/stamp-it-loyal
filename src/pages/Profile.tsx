@@ -1,139 +1,105 @@
 
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, User, Mail, Phone, Building, MapPin } from "lucide-react";
+import { Camera, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+interface CustomerProfile {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone_number: string;
+  email: string;
+  created_at: string;
+}
+
+interface BusinessProfile {
+  id: string;
+  user_id: string;
+  business_name: string;
+  contact_phone: string;
+  address: string;
+  created_at: string;
+}
 
 const Profile = () => {
   const { user, profile } = useAuth();
-  const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
-  const [passwords, setPasswords] = useState({
-    current: "",
-    new: "",
-    confirm: ""
-  });
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState<CustomerProfile | BusinessProfile | null>(null);
+  const [avatar, setAvatar] = useState<string>('');
+  
+  // Form states
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Fetch user profile data
-  const { data: userProfile, isLoading } = useQuery({
-    queryKey: ['userProfile', user?.id],
-    queryFn: async () => {
-      if (!user?.id || !profile?.role) return null;
-      
-      const table = profile.role === 'customer' ? 'customer_profiles' : 'business_profiles';
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id && !!profile?.role
-  });
+  useEffect(() => {
+    if (user && profile) {
+      fetchProfileData();
+      setAvatar(user.user_metadata?.avatar_url || '');
+    }
+  }, [user, profile]);
 
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: async (updates: any) => {
-      if (!user?.id || !profile?.role) throw new Error('User not authenticated');
-      
-      const table = profile.role === 'customer' ? 'customer_profiles' : 'business_profiles';
-      const { error } = await supabase
-        .from(table)
-        .update(updates)
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
-    },
-    onError: (error: any) => {
+  const fetchProfileData = async () => {
+    if (!user || !profile) return;
+
+    try {
+      if (profile.role === 'customer') {
+        const { data, error } = await supabase
+          .from('customer_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) throw error;
+        setProfileData(data as CustomerProfile);
+        if (data) {
+          setFullName(data.full_name || '');
+          setPhoneNumber(data.phone_number || '');
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) throw error;
+        setProfileData(data as BusinessProfile);
+        if (data) {
+          setBusinessName(data.business_name || '');
+          setContactPhone(data.contact_phone || '');
+          setAddress(data.address || '');
+        }
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
     }
-  });
-
-  // Update password mutation
-  const updatePasswordMutation = useMutation({
-    mutationFn: async ({ newPassword }: { newPassword: string }) => {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Password Updated",
-        description: "Your password has been successfully updated.",
-      });
-      setIsEditingPassword(false);
-      setPasswords({ current: "", new: "", confirm: "" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const handleProfileUpdate = (field: string, value: string) => {
-    updateProfileMutation.mutate({ [field]: value });
   };
 
-  const handlePasswordUpdate = () => {
-    if (passwords.new !== passwords.confirm) {
-      toast({
-        title: "Passwords Don't Match",
-        description: "Please make sure both passwords match.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (passwords.new.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    updatePasswordMutation.mutate({ newPassword: passwords.new });
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user?.id) return;
+    if (!file || !user) return;
 
+    setLoading(true);
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, { upsert: true });
@@ -144,16 +110,16 @@ const Profile = () => {
         .from('avatars')
         .getPublicUrl(fileName);
 
-      // Update user metadata with avatar URL
       const { error: updateError } = await supabase.auth.updateUser({
         data: { avatar_url: data.publicUrl }
       });
 
       if (updateError) throw updateError;
 
+      setAvatar(data.publicUrl);
       toast({
-        title: "Avatar Updated",
-        description: "Your profile picture has been updated.",
+        title: "Success",
+        description: "Profile picture updated successfully!"
       });
     } catch (error: any) {
       toast({
@@ -161,177 +127,249 @@ const Profile = () => {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
+  const handleProfileUpdate = async () => {
+    if (!user || !profile) return;
+
+    setLoading(true);
+    try {
+      if (profile.role === 'customer') {
+        const { error } = await supabase
+          .from('customer_profiles')
+          .update({
+            full_name: fullName,
+            phone_number: phoneNumber
+          })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('business_profiles')
+          .update({
+            business_name: businessName,
+            contact_phone: contactPhone,
+            address: address
+          })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords don't match",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setNewPassword('');
+      setConfirmPassword('');
+      toast({
+        title: "Success",
+        description: "Password updated successfully!"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user || !profile) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
+
+  const isCustomer = profile.role === 'customer';
+  const customerData = profileData as CustomerProfile;
+  const businessData = profileData as BusinessProfile;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              My Profile
-            </CardTitle>
-            <CardDescription>
-              Manage your account settings and personal information
-            </CardDescription>
+            <CardTitle>Profile Picture</CardTitle>
+            <CardDescription>Update your profile picture</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Avatar Section */}
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
-                  <AvatarFallback className="text-lg">
-                    {profile?.role === 'customer' 
-                      ? userProfile?.full_name?.charAt(0) || 'U'
-                      : userProfile?.business_name?.charAt(0) || 'B'
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="absolute -bottom-2 -right-2 rounded-full"
-                  onClick={handleAvatarClick}
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
+          <CardContent className="flex items-center space-x-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={avatar} />
+              <AvatarFallback>
+                {user.email?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
               <input
-                ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handleFileUpload}
+                onChange={handleAvatarUpload}
                 className="hidden"
+                id="avatar-upload"
               />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email
+              <Label htmlFor="avatar-upload" className="cursor-pointer">
+                <Button asChild>
+                  <span>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Change Picture
+                  </span>
+                </Button>
               </Label>
-              <Input value={user?.email || ''} disabled />
             </div>
-
-            {/* Role-specific fields */}
-            {profile?.role === 'customer' ? (
-              <>
-                <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input
-                    value={userProfile?.full_name || ''}
-                    onChange={(e) => handleProfileUpdate('full_name', e.target.value)}
-                    onBlur={(e) => handleProfileUpdate('full_name', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Phone Number
-                  </Label>
-                  <Input
-                    value={userProfile?.phone_number || ''}
-                    onChange={(e) => handleProfileUpdate('phone_number', e.target.value)}
-                    onBlur={(e) => handleProfileUpdate('phone_number', e.target.value)}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Business Name
-                  </Label>
-                  <Input
-                    value={userProfile?.business_name || ''}
-                    onChange={(e) => handleProfileUpdate('business_name', e.target.value)}
-                    onBlur={(e) => handleProfileUpdate('business_name', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Contact Phone
-                  </Label>
-                  <Input
-                    value={userProfile?.contact_phone || ''}
-                    onChange={(e) => handleProfileUpdate('contact_phone', e.target.value)}
-                    onBlur={(e) => handleProfileUpdate('contact_phone', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Address
-                  </Label>
-                  <Input
-                    value={userProfile?.address || ''}
-                    onChange={(e) => handleProfileUpdate('address', e.target.value)}
-                    onBlur={(e) => handleProfileUpdate('address', e.target.value)}
-                  />
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
-        {/* Password Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Password</CardTitle>
-            <CardDescription>Update your password</CardDescription>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>
+              Update your {isCustomer ? 'personal' : 'business'} information
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!isEditingPassword ? (
-              <Button onClick={() => setIsEditingPassword(true)}>
-                Change Password
-              </Button>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                value={user.email || ''}
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
+
+            {isCustomer ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                  />
+                </div>
+              </>
             ) : (
-              <div className="space-y-4">
+              <>
                 <div className="space-y-2">
-                  <Label>New Password</Label>
+                  <Label htmlFor="businessName">Business Name</Label>
                   <Input
-                    type="password"
-                    value={passwords.new}
-                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                    id="businessName"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Confirm New Password</Label>
+                  <Label htmlFor="contactPhone">Contact Phone</Label>
                   <Input
-                    type="password"
-                    value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    id="contactPhone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handlePasswordUpdate}
-                    disabled={updatePasswordMutation.isPending}
-                  >
-                    {updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsEditingPassword(false);
-                      setPasswords({ current: "", new: "", confirm: "" });
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
                 </div>
-              </div>
+              </>
             )}
+
+            <Button 
+              onClick={handleProfileUpdate}
+              disabled={loading}
+              className="w-full"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {loading ? 'Updating...' : 'Update Profile'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>Update your account password</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <Button 
+              onClick={handlePasswordUpdate}
+              disabled={loading || !newPassword || !confirmPassword}
+              className="w-full"
+            >
+              {loading ? 'Updating...' : 'Update Password'}
+            </Button>
           </CardContent>
         </Card>
       </div>

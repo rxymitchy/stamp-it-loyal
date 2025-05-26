@@ -27,14 +27,17 @@ const ResetPassword = () => {
           description: "Your password has been successfully updated.",
         });
         // Redirect to appropriate dashboard based on user role
-        setTimeout(() => {
-          supabase.from('profiles')
-            .select('role')
-            .eq('id', supabase.auth.getUser().then(({ data }) => data.user?.id))
-            .single()
-            .then(({ data }) => {
-              navigate(data?.role === 'business' ? '/business' : '/customer');
-            });
+        setTimeout(async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+            
+            navigate(data?.role === 'business' ? '/business' : '/customer');
+          }
         }, 1000);
       }
     });
