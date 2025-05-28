@@ -35,29 +35,64 @@ export const useCustomerData = (profile: any) => {
   const [totalVisits, setTotalVisits] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCustomerProfile = async () => {
-    if (!profile) return;
+    if (!profile) {
+      console.log('No profile provided to fetchCustomerProfile');
+      return;
+    }
+    
+    console.log('Fetching customer profile for user:', profile.id);
     
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('customer_profiles')
         .select('*')
         .eq('user_id', profile.id)
         .single();
       
-      setCustomerProfile(data);
-    } catch (error) {
-      console.error('Error fetching customer profile:', error);
+      if (error) {
+        console.error('Error fetching customer profile:', error);
+        if (error.code === 'PGRST116') {
+          // No customer profile found, create one
+          console.log('Creating new customer profile');
+          const { data: newProfile, error: createError } = await supabase
+            .from('customer_profiles')
+            .insert({ user_id: profile.id })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating customer profile:', createError);
+            throw createError;
+          }
+          
+          setCustomerProfile(newProfile);
+        } else {
+          throw error;
+        }
+      } else {
+        console.log('Customer profile found:', data);
+        setCustomerProfile(data);
+      }
+    } catch (error: any) {
+      console.error('Error in fetchCustomerProfile:', error);
+      setError(`Failed to load customer profile: ${error.message}`);
     }
   };
 
   const fetchVisitHistory = async () => {
-    if (!customerProfile) return;
+    if (!customerProfile) {
+      console.log('No customer profile available for fetchVisitHistory');
+      return;
+    }
+
+    console.log('Fetching visit history for customer:', customerProfile.id);
 
     try {
       // Get visits with business info
-      const { data: visits } = await supabase
+      const { data: visits, error } = await supabase
         .from('visits')
         .select(`
           visit_date,
@@ -68,6 +103,13 @@ export const useCustomerData = (profile: any) => {
           )
         `)
         .eq('customer_profile_id', customerProfile.id);
+
+      if (error) {
+        console.error('Error fetching visits:', error);
+        throw error;
+      }
+
+      console.log('Visits fetched:', visits);
 
       // Calculate total points from visits
       const totalEarned = visits?.reduce((sum, visit) => sum + (visit.points_earned || 0), 0) || 0;
@@ -97,16 +139,22 @@ export const useCustomerData = (profile: any) => {
       const businessList = Array.from(businessMap.values());
       setBusinesses(businessList);
       setTotalVisits(visits?.length || 0);
-    } catch (error) {
-      console.error('Error fetching visit history:', error);
+    } catch (error: any) {
+      console.error('Error in fetchVisitHistory:', error);
+      setError(`Failed to load visit history: ${error.message}`);
     }
   };
 
   const fetchAvailableRewards = async () => {
-    if (!customerProfile) return;
+    if (!customerProfile) {
+      console.log('No customer profile available for fetchAvailableRewards');
+      return;
+    }
+
+    console.log('Fetching available rewards');
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('rewards')
         .select(`
           *,
@@ -114,8 +162,12 @@ export const useCustomerData = (profile: any) => {
             business_name
           )
         `)
-        .eq('is_active', true)
-        .lte('points_required', totalPoints);
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching rewards:', error);
+        throw error;
+      }
 
       const formattedRewards = data?.map(reward => ({
         id: reward.id,
@@ -126,8 +178,9 @@ export const useCustomerData = (profile: any) => {
       })) || [];
 
       setRewards(formattedRewards);
-    } catch (error) {
-      console.error('Error fetching rewards:', error);
+    } catch (error: any) {
+      console.error('Error in fetchAvailableRewards:', error);
+      setError(`Failed to load rewards: ${error.message}`);
     }
   };
 
@@ -164,20 +217,37 @@ export const useCustomerData = (profile: any) => {
 
   useEffect(() => {
     if (profile?.role === 'customer') {
-      fetchCustomerProfile();
+      console.log('Starting customer data fetch for profile:', profile);
+      setLoading(true);
+      setError(null);
+      
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          console.error('Customer data fetch timed out');
+          setError('Loading timed out. Please try refreshing the page.');
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout
+
+      fetchCustomerProfile().finally(() => {
+        clearTimeout(timeoutId);
+      });
     }
   }, [profile]);
 
   useEffect(() => {
     if (customerProfile) {
+      console.log('Customer profile loaded, fetching additional data');
       Promise.all([
         fetchVisitHistory(),
         fetchAvailableRewards()
       ]).finally(() => {
+        console.log('All customer data loaded');
         setLoading(false);
       });
     }
-  }, [customerProfile, totalPoints]);
+  }, [customerProfile]);
 
   return {
     customerProfile,
@@ -187,9 +257,11 @@ export const useCustomerData = (profile: any) => {
     totalVisits,
     totalPoints,
     loading,
+    error,
     redeemReward,
     refetch: () => {
       setLoading(true);
+      setError(null);
       fetchCustomerProfile();
       if (customerProfile) {
         Promise.all([
