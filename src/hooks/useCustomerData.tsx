@@ -12,7 +12,6 @@ interface BusinessVisit {
 interface Reward {
   id: string;
   title: string;
-  description: string;
   points_required: number;
   business_name: string;
   business_profile_id: string;
@@ -110,7 +109,6 @@ export const useCustomerData = (profile: any) => {
     const formattedRewards = data?.map(reward => ({
       id: reward.id,
       title: reward.title,
-      description: reward.description || '',
       points_required: reward.points_required,
       business_name: reward.business_profiles.business_name,
       business_profile_id: reward.business_profile_id
@@ -122,13 +120,12 @@ export const useCustomerData = (profile: any) => {
   const redeemReward = async (rewardId: string, pointsRequired: number, businessProfileId: string) => {
     if (!customerProfile) return;
 
-    const qrCode = `STAMPIT-${Date.now()}-${rewardId}`;
-    
-    // For now, we'll track redemptions in the rewards table until reward_redemptions is properly set up
+    // Simple redemption tracking - just mark reward as redeemed
     const { error } = await supabase
       .from('rewards')
       .update({ 
-        redemption_count: (rewards.find(r => r.id === rewardId)?.redemption_count || 0) + 1 
+        reward_status: 'redeemed',
+        customer_profile_id: customerProfile.id
       })
       .eq('id', rewardId);
 

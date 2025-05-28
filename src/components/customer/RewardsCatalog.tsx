@@ -7,7 +7,6 @@ import { QrCode } from "lucide-react";
 interface Reward {
   id: string;
   title: string;
-  description: string;
   points_required: number;
   business_name: string;
   business_profile_id: string;
@@ -38,7 +37,6 @@ const RewardsCatalog = ({ rewards, totalPoints, onRedeemReward }: RewardsCatalog
             <div key={reward.id} className="p-4 rounded-lg border flex items-center justify-between">
               <div className="flex-1">
                 <h3 className="font-semibold">{reward.title}</h3>
-                <p className="text-sm text-gray-600">{reward.description}</p>
                 <p className="text-sm text-purple-600">{reward.business_name}</p>
               </div>
               <div className="flex items-center space-x-4">
