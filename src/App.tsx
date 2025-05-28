@@ -20,16 +20,27 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) => {
   const { user, profile, loading } = useAuth();
   
+  console.log('ProtectedRoute - Loading:', loading, 'User:', !!user, 'Profile:', profile);
+  
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-amber-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
-  if (!user) {
+  if (!user || !profile) {
+    console.log('Redirecting to signin - No user or profile');
     return <Navigate to="/signin" replace />;
   }
   
-  if (requiredRole && profile?.role !== requiredRole) {
-    return <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace />;
+  if (requiredRole && profile.role !== requiredRole) {
+    console.log('Redirecting due to role mismatch - Required:', requiredRole, 'Actual:', profile.role);
+    return <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />;
   }
   
   return <>{children}</>;
@@ -38,15 +49,51 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 const AppRoutes = () => {
   const { user, profile, loading } = useAuth();
   
+  console.log('AppRoutes - Loading:', loading, 'User:', !!user, 'Profile:', profile);
+  
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-amber-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <Index />} />
-      <Route path="/signin" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <SignIn />} />
-      <Route path="/signup" element={user ? <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace /> : <SignUp />} />
+      <Route 
+        path="/" 
+        element={
+          user && profile ? (
+            <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
+          ) : (
+            <Index />
+          )
+        } 
+      />
+      <Route 
+        path="/signin" 
+        element={
+          user && profile ? (
+            <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
+          ) : (
+            <SignIn />
+          )
+        } 
+      />
+      <Route 
+        path="/signup" 
+        element={
+          user && profile ? (
+            <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
+          ) : (
+            <SignUp />
+          )
+        } 
+      />
       <Route path="/email-verification" element={<EmailVerificationPage />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route 

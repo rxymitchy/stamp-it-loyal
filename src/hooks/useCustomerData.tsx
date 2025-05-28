@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface BusinessVisit {
   business_name: string;
@@ -33,105 +34,131 @@ export const useCustomerData = (profile: any) => {
   const [redemptions, setRedemptions] = useState<RedemptionHistory[]>([]);
   const [totalVisits, setTotalVisits] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const fetchCustomerProfile = async () => {
     if (!profile) return;
     
-    const { data } = await supabase
-      .from('customer_profiles')
-      .select('*')
-      .eq('user_id', profile.id)
-      .single();
-    
-    setCustomerProfile(data);
+    try {
+      const { data } = await supabase
+        .from('customer_profiles')
+        .select('*')
+        .eq('user_id', profile.id)
+        .single();
+      
+      setCustomerProfile(data);
+    } catch (error) {
+      console.error('Error fetching customer profile:', error);
+    }
   };
 
   const fetchVisitHistory = async () => {
     if (!customerProfile) return;
 
-    // Get visits with business info - using the correct table structure
-    const { data: visits } = await supabase
-      .from('visits')
-      .select(`
-        visit_date,
-        points_earned,
-        business_profile_id,
-        business_profiles!inner(
-          business_name
-        )
-      `)
-      .eq('customer_profile_id', customerProfile.id);
+    try {
+      // Get visits with business info
+      const { data: visits } = await supabase
+        .from('visits')
+        .select(`
+          visit_date,
+          points_earned,
+          business_profile_id,
+          business_profiles!inner(
+            business_name
+          )
+        `)
+        .eq('customer_profile_id', customerProfile.id);
 
-    // Calculate total points from visits
-    const totalEarned = visits?.reduce((sum, visit) => sum + (visit.points_earned || 0), 0) || 0;
-    setTotalPoints(totalEarned);
+      // Calculate total points from visits
+      const totalEarned = visits?.reduce((sum, visit) => sum + (visit.points_earned || 0), 0) || 0;
+      setTotalPoints(totalEarned);
 
-    // Group by business
-    const businessMap = new Map();
-    visits?.forEach(visit => {
-      const businessId = visit.business_profile_id;
-      const businessName = visit.business_profiles.business_name;
-      
-      if (businessMap.has(businessId)) {
-        businessMap.get(businessId).visit_count++;
-        if (new Date(visit.visit_date) > new Date(businessMap.get(businessId).last_visit)) {
-          businessMap.get(businessId).last_visit = visit.visit_date;
+      // Group by business
+      const businessMap = new Map();
+      visits?.forEach(visit => {
+        const businessId = visit.business_profile_id;
+        const businessName = visit.business_profiles.business_name;
+        
+        if (businessMap.has(businessId)) {
+          businessMap.get(businessId).visit_count++;
+          if (new Date(visit.visit_date) > new Date(businessMap.get(businessId).last_visit)) {
+            businessMap.get(businessId).last_visit = visit.visit_date;
+          }
+        } else {
+          businessMap.set(businessId, {
+            business_name: businessName,
+            visit_count: 1,
+            rewards_earned: 0,
+            last_visit: visit.visit_date
+          });
         }
-      } else {
-        businessMap.set(businessId, {
-          business_name: businessName,
-          visit_count: 1,
-          rewards_earned: 0,
-          last_visit: visit.visit_date
-        });
-      }
-    });
+      });
 
-    const businessList = Array.from(businessMap.values());
-    setBusinesses(businessList);
-    setTotalVisits(visits?.length || 0);
+      const businessList = Array.from(businessMap.values());
+      setBusinesses(businessList);
+      setTotalVisits(visits?.length || 0);
+    } catch (error) {
+      console.error('Error fetching visit history:', error);
+    }
   };
 
   const fetchAvailableRewards = async () => {
     if (!customerProfile) return;
 
-    const { data } = await supabase
-      .from('rewards')
-      .select(`
-        *,
-        business_profiles!inner(
-          business_name
-        )
-      `)
-      .eq('is_active', true)
-      .lte('points_required', totalPoints);
+    try {
+      const { data } = await supabase
+        .from('rewards')
+        .select(`
+          *,
+          business_profiles!inner(
+            business_name
+          )
+        `)
+        .eq('is_active', true)
+        .lte('points_required', totalPoints);
 
-    const formattedRewards = data?.map(reward => ({
-      id: reward.id,
-      title: reward.title,
-      points_required: reward.points_required,
-      business_name: reward.business_profiles.business_name,
-      business_profile_id: reward.business_profile_id
-    })) || [];
+      const formattedRewards = data?.map(reward => ({
+        id: reward.id,
+        title: reward.title,
+        points_required: reward.points_required,
+        business_name: reward.business_profiles.business_name,
+        business_profile_id: reward.business_profile_id
+      })) || [];
 
-    setRewards(formattedRewards);
+      setRewards(formattedRewards);
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+    }
   };
 
   const redeemReward = async (rewardId: string, pointsRequired: number, businessProfileId: string) => {
     if (!customerProfile) return;
 
-    // Simple redemption tracking - just mark reward as redeemed
-    const { error } = await supabase
-      .from('rewards')
-      .update({ 
-        reward_status: 'redeemed',
-        customer_profile_id: customerProfile.id
-      })
-      .eq('id', rewardId);
+    try {
+      // Simple redemption tracking
+      const { error } = await supabase
+        .from('rewards')
+        .update({ 
+          reward_status: 'redeemed',
+          customer_profile_id: customerProfile.id
+        })
+        .eq('id', rewardId);
 
-    if (!error) {
+      if (error) throw error;
+
       setTotalPoints(prev => prev - pointsRequired);
       fetchAvailableRewards();
+      
+      toast({
+        title: "Reward Redeemed! 🎉",
+        description: "Your reward has been successfully redeemed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -143,8 +170,12 @@ export const useCustomerData = (profile: any) => {
 
   useEffect(() => {
     if (customerProfile) {
-      fetchVisitHistory();
-      fetchAvailableRewards();
+      Promise.all([
+        fetchVisitHistory(),
+        fetchAvailableRewards()
+      ]).finally(() => {
+        setLoading(false);
+      });
     }
   }, [customerProfile, totalPoints]);
 
@@ -155,11 +186,19 @@ export const useCustomerData = (profile: any) => {
     redemptions,
     totalVisits,
     totalPoints,
+    loading,
     redeemReward,
     refetch: () => {
+      setLoading(true);
       fetchCustomerProfile();
-      fetchVisitHistory();
-      fetchAvailableRewards();
+      if (customerProfile) {
+        Promise.all([
+          fetchVisitHistory(),
+          fetchAvailableRewards()
+        ]).finally(() => {
+          setLoading(false);
+        });
+      }
     }
   };
 };
