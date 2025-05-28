@@ -14,7 +14,6 @@ import Profile from "./pages/Profile";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import NotFound from "./pages/NotFound";
-import Header from "./components/Header";
 
 const queryClient = new QueryClient();
 
@@ -30,15 +29,10 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   }
   
   if (requiredRole && profile?.role !== requiredRole) {
-    return <Navigate to="/signin" replace />;
+    return <Navigate to={profile?.role === 'business' ? '/business' : '/customer'} replace />;
   }
   
-  return (
-    <div>
-      <Header />
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 };
 
 const AppRoutes = () => {
