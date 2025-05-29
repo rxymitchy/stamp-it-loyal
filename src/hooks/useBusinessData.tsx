@@ -15,62 +15,75 @@ export const useBusinessData = (profile: any) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchBusinessProfile = async () => {
     if (!profile) return;
     
-    const { data } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .eq('user_id', profile.id)
-      .single();
-    
-    setBusinessProfile(data);
+    try {
+      setError(null);
+      const { data } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('user_id', profile.id)
+        .single();
+      
+      setBusinessProfile(data);
+    } catch (error: any) {
+      console.error('Error fetching business profile:', error);
+      setError(`Failed to load business profile: ${error.message}`);
+    }
   };
 
   const fetchCustomers = async () => {
     if (!businessProfile) return;
 
-    const { data: visits } = await supabase
-      .from('visits')
-      .select(`
-        customer_profile_id,
-        customer_profiles!inner(
-          id,
-          full_name,
-          phone_number
-        )
-      `)
-      .eq('business_profile_id', businessProfile.id);
+    try {
+      setError(null);
+      const { data: visits } = await supabase
+        .from('visits')
+        .select(`
+          customer_profile_id,
+          customer_profiles!inner(
+            id,
+            full_name,
+            phone_number
+          )
+        `)
+        .eq('business_profile_id', businessProfile.id);
 
-    const { data: rewards } = await supabase
-      .from('rewards')
-      .select('customer_profile_id')
-      .eq('business_profile_id', businessProfile.id);
+      const { data: rewards } = await supabase
+        .from('rewards')
+        .select('customer_profile_id')
+        .eq('business_profile_id', businessProfile.id);
 
-    // Group visits by customer
-    const customerMap = new Map();
-    visits?.forEach(visit => {
-      const customer = visit.customer_profiles;
-      if (customerMap.has(customer.id)) {
-        customerMap.get(customer.id).visit_count++;
-      } else {
-        customerMap.set(customer.id, {
-          ...customer,
-          visit_count: 1,
-          rewards_earned: 0
-        });
-      }
-    });
+      // Group visits by customer
+      const customerMap = new Map();
+      visits?.forEach(visit => {
+        const customer = visit.customer_profiles;
+        if (customerMap.has(customer.id)) {
+          customerMap.get(customer.id).visit_count++;
+        } else {
+          customerMap.set(customer.id, {
+            ...customer,
+            visit_count: 1,
+            rewards_earned: 0
+          });
+        }
+      });
 
-    // Count rewards per customer
-    rewards?.forEach(reward => {
-      if (customerMap.has(reward.customer_profile_id)) {
-        customerMap.get(reward.customer_profile_id).rewards_earned++;
-      }
-    });
+      // Count rewards per customer
+      rewards?.forEach(reward => {
+        if (customerMap.has(reward.customer_profile_id)) {
+          customerMap.get(reward.customer_profile_id).rewards_earned++;
+        }
+      });
 
-    setCustomers(Array.from(customerMap.values()));
+      setCustomers(Array.from(customerMap.values()));
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      setError(`Failed to load customers: ${error.message}`);
+    }
   };
 
   const handleAddVisit = async (customerPhone: string) => {
@@ -78,6 +91,7 @@ export const useBusinessData = (profile: any) => {
     
     setLoading(true);
     try {
+      setError(null);
       // Find or create customer
       let { data: customer } = await supabase
         .from('customer_profiles')
@@ -113,6 +127,8 @@ export const useBusinessData = (profile: any) => {
 
       fetchCustomers();
     } catch (error: any) {
+      console.error('Error adding visit:', error);
+      setError(`Failed to add visit: ${error.message}`);
       toast({
         title: "Error",
         description: error.message,
@@ -124,33 +140,42 @@ export const useBusinessData = (profile: any) => {
   };
 
   const handleRedeemReward = async (customerId: string) => {
-    const { error } = await supabase
-      .from('rewards')
-      .update({ reward_status: 'redeemed' })
-      .eq('customer_profile_id', customerId)
-      .eq('business_profile_id', businessProfile.id)
-      .eq('reward_status', 'earned');
+    try {
+      setError(null);
+      const { error } = await supabase
+        .from('rewards')
+        .update({ reward_status: 'redeemed' })
+        .eq('customer_profile_id', customerId)
+        .eq('business_profile_id', businessProfile.id)
+        .eq('reward_status', 'earned');
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to redeem reward",
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to redeem reward",
-        variant: "destructive"
+        title: "Reward redeemed! ✨",
+        description: "Customer reward has been marked as used",
       });
-      return;
+
+      fetchCustomers();
+    } catch (error: any) {
+      console.error('Error redeeming reward:', error);
+      setError(`Failed to redeem reward: ${error.message}`);
     }
-
-    toast({
-      title: "Reward redeemed! ✨",
-      description: "Customer reward has been marked as used",
-    });
-
-    fetchCustomers();
   };
 
   useEffect(() => {
     if (profile?.role === 'business') {
-      fetchBusinessProfile();
+      setLoading(true);
+      fetchBusinessProfile().finally(() => {
+        setLoading(false);
+      });
     }
   }, [profile]);
 
@@ -164,11 +189,18 @@ export const useBusinessData = (profile: any) => {
     businessProfile,
     customers,
     loading,
+    error,
     handleAddVisit,
     handleRedeemReward,
     refetch: () => {
-      fetchBusinessProfile();
-      fetchCustomers();
+      setLoading(true);
+      setError(null);
+      fetchBusinessProfile().finally(() => {
+        if (businessProfile) {
+          fetchCustomers();
+        }
+        setLoading(false);
+      });
     }
   };
 };
