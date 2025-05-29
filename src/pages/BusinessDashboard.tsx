@@ -1,15 +1,21 @@
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessData } from "@/hooks/useBusinessData";
+import { useAdvancedBusinessData } from "@/hooks/useAdvancedBusinessData";
 import { Button } from "@/components/ui/button";
-import { LogOut, RefreshCw } from "lucide-react";
-import BusinessHeader from "@/components/business/BusinessHeader";
-import AddVisitForm from "@/components/business/AddVisitForm";
-import CustomerList from "@/components/business/CustomerList";
-import BusinessStats from "@/components/business/BusinessStats";
+import { RefreshCw } from "lucide-react";
+import BusinessSidebar from "@/components/business/sidebar/BusinessSidebar";
+import DashboardOverview from "@/components/business/dashboard/DashboardOverview";
+import CustomerManagement from "@/components/business/customers/CustomerManagement";
+import RewardsManagement from "@/components/business/rewards/RewardsManagement";
+import AnalyticsDashboard from "@/components/business/analytics/AnalyticsDashboard";
+import BusinessSettings from "@/components/business/settings/BusinessSettings";
 
 const BusinessDashboard = () => {
   const { profile, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  
   const {
     businessProfile,
     customers,
@@ -20,12 +26,34 @@ const BusinessDashboard = () => {
     refetch
   } = useBusinessData(profile);
 
+  const {
+    data: advancedData,
+    loading: advancedLoading,
+    createReward,
+    updateReward,
+    deleteReward,
+    toggleReward,
+    exportCustomersCSV,
+    refetch: refetchAdvanced
+  } = useAdvancedBusinessData(businessProfile);
+
   const handleSignOut = async () => {
     await signOut();
   };
 
   const handleRetry = () => {
     refetch();
+    refetchAdvanced();
+  };
+
+  const handleUpdateBusinessProfile = async (updatedProfile: any) => {
+    // This would be implemented in the useBusinessData hook
+    console.log('Updating business profile:', updatedProfile);
+  };
+
+  const handleSearchCustomer = (phone: string) => {
+    // Filter customers by phone number
+    console.log('Searching for customer:', phone);
   };
 
   // Show error state with retry option
@@ -44,10 +72,6 @@ const BusinessDashboard = () => {
             <Button onClick={handleRetry} className="bg-gradient-to-r from-purple-600 to-amber-600">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
-            </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
             </Button>
           </div>
         </div>
@@ -69,29 +93,75 @@ const BusinessDashboard = () => {
   }
 
   const totalVisits = customers.reduce((sum, c) => sum + c.visit_count, 0);
+  const totalRewards = customers.reduce((sum, c) => sum + c.rewards_earned, 0);
+
+  // Mock recent activity
+  const recentActivity = customers.slice(0, 5).map(customer => ({
+    id: customer.id,
+    type: 'visit' as const,
+    customerName: customer.full_name,
+    timestamp: '2 hours ago'
+  }));
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <DashboardOverview
+            totalCustomers={customers.length}
+            totalVisits={totalVisits}
+            totalRewards={totalRewards}
+            recentActivity={recentActivity}
+          />
+        );
+      case 'customers':
+        return (
+          <CustomerManagement
+            customers={customers}
+            onSearchCustomer={handleSearchCustomer}
+            onAddVisit={handleAddVisit}
+            onExportCustomers={() => exportCustomersCSV(customers)}
+          />
+        );
+      case 'rewards':
+        return (
+          <RewardsManagement
+            rewards={advancedData.rewards}
+            onCreateReward={createReward}
+            onUpdateReward={updateReward}
+            onDeleteReward={deleteReward}
+            onToggleReward={toggleReward}
+          />
+        );
+      case 'analytics':
+        return <AnalyticsDashboard data={advancedData.analytics} />;
+      case 'settings':
+        return (
+          <BusinessSettings
+            businessProfile={businessProfile}
+            onUpdateProfile={handleUpdateBusinessProfile}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50">
-      <BusinessHeader 
-        businessName={businessProfile.business_name}
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <BusinessSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         onSignOut={handleSignOut}
+        businessName={businessProfile.business_name}
       />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <AddVisitForm 
-          onAddVisit={handleAddVisit}
-          loading={loading}
-        />
-
-        <CustomerList 
-          customers={customers}
-          onRedeemReward={handleRedeemReward}
-        />
-
-        <BusinessStats 
-          totalCustomers={customers.length}
-          totalVisits={totalVisits}
-        />
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto p-6">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
