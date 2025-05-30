@@ -18,10 +18,10 @@ interface Reward {
 
 interface RewardsManagementProps {
   rewards: Reward[];
-  onCreateReward: (title: string, pointsRequired: number) => void;
-  onUpdateReward: (id: string, title: string, pointsRequired: number) => void;
-  onDeleteReward: (id: string) => void;
-  onToggleReward: (id: string, isActive: boolean) => void;
+  onCreateReward: (rewardData: { title: string; points_required: number }) => Promise<void>;
+  onUpdateReward: (id: string, updates: Partial<{ title: string; points_required: number; is_active: boolean }>) => Promise<void>;
+  onDeleteReward: (id: string) => Promise<void>;
+  onToggleReward: (id: string, isActive: boolean) => Promise<void>;
 }
 
 const RewardsManagement = ({ 
@@ -36,7 +36,7 @@ const RewardsManagement = ({
   const [newTitle, setNewTitle] = useState('');
   const [newPoints, setNewPoints] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!newTitle.trim() || !newPoints.trim()) {
       toast({
         title: "Error",
@@ -56,16 +56,20 @@ const RewardsManagement = ({
       return;
     }
 
-    if (editingReward) {
-      onUpdateReward(editingReward.id, newTitle, points);
-      setEditingReward(null);
-    } else {
-      onCreateReward(newTitle, points);
-      setShowCreateForm(false);
-    }
+    try {
+      if (editingReward) {
+        await onUpdateReward(editingReward.id, { title: newTitle, points_required: points });
+        setEditingReward(null);
+      } else {
+        await onCreateReward({ title: newTitle, points_required: points });
+        setShowCreateForm(false);
+      }
 
-    setNewTitle('');
-    setNewPoints('');
+      setNewTitle('');
+      setNewPoints('');
+    } catch (error) {
+      console.error('Error submitting reward:', error);
+    }
   };
 
   const resetForm = () => {
