@@ -44,33 +44,6 @@ export type Database = {
           },
         ]
       }
-      businesses: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          phone: string
-          points_per_visit: number | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          phone: string
-          points_per_visit?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          phone?: string
-          points_per_visit?: number | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       customer_profiles: {
         Row: {
           created_at: string | null
@@ -105,33 +78,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      customers: {
-        Row: {
-          created_at: string | null
-          email: string | null
-          id: string
-          name: string | null
-          phone: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          name?: string | null
-          phone?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          name?: string | null
-          phone?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -190,20 +136,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_rewards_business"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rewards_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "rewards_business_profile_id_fkey"
             columns: ["business_profile_id"]
             isOneToOne: false
@@ -249,38 +181,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_visits_business"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_visits_customer"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "visits_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "visits_business_profile_id_fkey"
             columns: ["business_profile_id"]
             isOneToOne: false
             referencedRelation: "business_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "visits_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {
