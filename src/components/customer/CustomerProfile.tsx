@@ -1,5 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { User } from "lucide-react";
 
 interface CustomerProfileProps {
   customerProfile: any;
@@ -10,7 +13,10 @@ const CustomerProfile = ({ customerProfile, userEmail }: CustomerProfileProps) =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile Settings</CardTitle>
+        <CardTitle className="flex items-center space-x-2">
+          <User className="h-5 w-5" />
+          <span>Profile Settings</span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -32,6 +38,14 @@ const CustomerProfile = ({ customerProfile, userEmail }: CustomerProfileProps) =
               {new Date(customerProfile.created_at).toLocaleDateString()}
             </p>
           </div>
+        </div>
+        
+        <div className="pt-4 border-t">
+          <Link to="/profile">
+            <Button variant="outline" className="w-full">
+              Edit Profile
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>

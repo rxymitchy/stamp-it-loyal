@@ -22,26 +22,39 @@ const SignIn = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting sign in for:', email, 'as role:', role);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Auth error:', error);
         if (error.message.includes('Email not confirmed')) {
           navigate('/email-verification', { state: { email } });
-          setLoading(false);
           return;
         }
         throw error;
       }
 
-      // Check if user role matches the selected role
-      const { data: profileData } = await supabase
+      if (!data.user) {
+        throw new Error('No user data returned');
+      }
+
+      console.log('Auth successful, checking profile...');
+
+      // Check if user has a profile and it matches the selected role
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', data.user.id)
         .single();
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw new Error('Failed to load user profile');
+      }
 
       if (profileData?.role !== role) {
         await supabase.auth.signOut();
@@ -50,7 +63,6 @@ const SignIn = () => {
           description: `This account is registered as a ${profileData?.role}. Please select the correct role.`,
           variant: "destructive"
         });
-        setLoading(false);
         return;
       }
 
@@ -61,13 +73,47 @@ const SignIn = () => {
 
       navigate(role === 'business' ? '/business' : '/customer');
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign In Failed",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTryAgain = () => {
+    // Clear form and reset state
+    setPassword("");
+    setLoading(false);
+    // Focus back to password field
+    document.getElementById('password')?.focus();
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
+      
+      // Clear form data
+      setEmail("");
+      setPassword("");
+      
+      // Navigate to home page
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -124,6 +170,7 @@ const SignIn = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -135,6 +182,7 @@ const SignIn = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
             </div>
 
@@ -145,6 +193,28 @@ const SignIn = () => {
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
+
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleTryAgain}
+                disabled={loading}
+                className="flex-1"
+              >
+                Try Again
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSignOut}
+                disabled={loading}
+                className="flex-1"
+              >
+                Sign Out
+              </Button>
+            </div>
 
             <div className="text-center space-y-2">
               <Button

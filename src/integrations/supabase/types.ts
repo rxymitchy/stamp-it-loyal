@@ -151,6 +151,48 @@ export type Database = {
           },
         ]
       }
+      stamps: {
+        Row: {
+          business_profile_id: string
+          created_at: string
+          customer_profile_id: string
+          id: string
+          is_redeemed: boolean
+          stamp_date: string
+        }
+        Insert: {
+          business_profile_id: string
+          created_at?: string
+          customer_profile_id: string
+          id?: string
+          is_redeemed?: boolean
+          stamp_date?: string
+        }
+        Update: {
+          business_profile_id?: string
+          created_at?: string
+          customer_profile_id?: string
+          id?: string
+          is_redeemed?: boolean
+          stamp_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stamps_business_profile_id_fkey"
+            columns: ["business_profile_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stamps_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           business_id: string | null
