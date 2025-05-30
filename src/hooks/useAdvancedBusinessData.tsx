@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -42,7 +41,7 @@ export const useAdvancedBusinessData = (businessProfile: any) => {
         .eq('business_profile_id', businessProfile.id);
 
       // Generate mock analytics data for now
-      const mockAnalytics = {
+      const mockAnalytics: AdvancedBusinessData['analytics'] = {
         visitsByMonth: [
           { month: 'Jan', visits: 45, customers: 12 },
           { month: 'Feb', visits: 52, customers: 15 },
