@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Download, Filter } from "lucide-react";
+import { Search, UserPlus, Download, Filter, Star } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -19,10 +19,11 @@ interface CustomerManagementProps {
   customers: Customer[];
   onSearchCustomer: (phone: string) => void;
   onAddVisit: (phone: string) => void;
+  onAddStamp: (customerPhoneNumber: string) => Promise<boolean>;
   onExportCustomers: () => void;
 }
 
-const CustomerManagement = ({ customers, onSearchCustomer, onAddVisit, onExportCustomers }: CustomerManagementProps) => {
+const CustomerManagement = ({ customers, onSearchCustomer, onAddVisit, onAddStamp, onExportCustomers }: CustomerManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
@@ -130,13 +131,24 @@ const CustomerManagement = ({ customers, onSearchCustomer, onAddVisit, onExportC
                   </div>
                 )}
 
-                <Button 
-                  className="w-full"
-                  onClick={() => onAddVisit(selectedCustomer.phone_number)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Visit
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => onAddVisit(selectedCustomer.phone_number)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Visit
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => onAddStamp(selectedCustomer.phone_number)}
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Add Stamp
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
