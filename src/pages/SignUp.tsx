@@ -40,11 +40,11 @@ const SignUp = () => {
         throw new Error('Business name and contact phone are required for businesses');
       }
 
+      // Step 1: Create the auth user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: 'https://stamp-it-loyal.lovable.app/signin',
           data: {
             role: role
           }
@@ -56,64 +56,74 @@ const SignUp = () => {
         throw error;
       }
 
+      if (!data.user) {
+        throw new Error('No user data returned from signup');
+      }
+
+      console.log('User created successfully:', data.user.id);
+
+      // Step 2: Create profile entry
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email: email,
+        role: role
+      });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // If it's a duplicate key error, that's actually OK (user might already exist)
+        if (!profileError.message.includes('duplicate key')) {
+          throw profileError;
+        }
+      }
+
+      console.log('Profile created successfully');
+
+      // Step 3: Create role-specific profile
+      if (role === 'customer') {
+        const { error: customerError } = await supabase.from('customer_profiles').insert({
+          user_id: data.user.id,
+          full_name: fullName.trim(),
+          phone_number: phoneNumber.trim(),
+          email: email
+        });
+
+        if (customerError) {
+          console.error('Customer profile error:', customerError);
+          throw customerError;
+        }
+        console.log('Customer profile created successfully');
+      } else {
+        const { error: businessError } = await supabase.from('business_profiles').insert({
+          user_id: data.user.id,
+          business_name: businessName.trim(),
+          contact_phone: contactPhone.trim(),
+          address: address.trim()
+        });
+
+        if (businessError) {
+          console.error('Business profile error:', businessError);
+          throw businessError;
+        }
+        console.log('Business profile created successfully');
+      }
+
+      // Check if email needs to be confirmed
       if (data.user && !data.user.email_confirmed_at) {
+        toast({
+          title: "Check your email!",
+          description: "We've sent you a confirmation link. Please click it to complete your registration.",
+        });
         navigate('/email-verification', { state: { email } });
-        setLoading(false);
         return;
       }
 
-      if (data.user) {
-        console.log('User created, creating profiles...');
-        
-        // Create profile entry first
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          email: email,
-          role: role
-        });
+      toast({
+        title: "Account created successfully!",
+        description: "Welcome to StampIt! You can now start using the app.",
+      });
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // If profile already exists, that's okay
-          if (!profileError.message.includes('duplicate key')) {
-            throw profileError;
-          }
-        }
-
-        // Create role-specific profile
-        if (role === 'customer') {
-          const { error: customerError } = await supabase.from('customer_profiles').insert({
-            user_id: data.user.id,
-            full_name: fullName.trim(),
-            phone_number: phoneNumber.trim(),
-            email: email
-          });
-
-          if (customerError) {
-            console.error('Customer profile error:', customerError);
-            throw customerError;
-          }
-        } else {
-          const { error: businessError } = await supabase.from('business_profiles').insert({
-            user_id: data.user.id,
-            business_name: businessName.trim(),
-            contact_phone: contactPhone.trim(),
-            address: address.trim()
-          });
-
-          if (businessError) {
-            console.error('Business profile error:', businessError);
-            throw businessError;
-          }
-        }
-
-        toast({
-          title: "Account created successfully!",
-          description: "Welcome to StampIt! You can now start using the app.",
-        });
-
-        navigate(role === 'business' ? '/business' : '/customer');
-      }
+      navigate(role === 'business' ? '/business' : '/customer');
     } catch (error: any) {
       console.error('Sign up error:', error);
       toast({

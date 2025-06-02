@@ -15,7 +15,7 @@ import LoyaltyCard from "@/components/customer/LoyaltyCard";
 import StampsDisplay from "@/components/customer/StampsDisplay";
 
 const CustomerDashboard = () => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
 
@@ -36,19 +36,22 @@ const CustomerDashboard = () => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Customer dashboard sign out triggered');
       await signOut();
-      navigate('/');
     } catch (error) {
       console.error('Sign out error:', error);
+      // Force navigation even if sign out fails
+      navigate('/');
     }
   };
 
   const handleRetry = () => {
+    console.log('Retry button clicked, refetching data...');
     refetch();
   };
 
   // Show error state with retry option
-  if (error && !loading) {
+  if (error && !loading && !authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
@@ -75,7 +78,7 @@ const CustomerDashboard = () => {
   }
 
   // Show loading state
-  if (loading || !customerProfile) {
+  if (loading || authLoading || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 flex items-center justify-center">
         <div className="text-center">
@@ -93,7 +96,9 @@ const CustomerDashboard = () => {
       <div className="bg-white/80 backdrop-blur border-b border-purple-100 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-800">Welcome, {customerProfile.full_name || 'Customer'}</h1>
+            <h1 className="text-xl font-bold text-gray-800">
+              Welcome, {customerProfile?.full_name || profile?.email?.split('@')[0] || 'Customer'}
+            </h1>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
@@ -109,7 +114,7 @@ const CustomerDashboard = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <LoyaltyCard 
-              customerName={customerProfile.full_name || 'Customer'}
+              customerName={customerProfile?.full_name || profile?.email?.split('@')[0] || 'Customer'}
               stamps={stamps}
               onClaimReward={claimReward}
             />

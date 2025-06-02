@@ -34,6 +34,7 @@ export const useRewards = (customerProfile: any, totalPoints: number, setTotalPo
 
     console.log('Fetching available rewards');
     setLoading(true);
+    setError(null);
 
     try {
       const { data, error } = await supabase
@@ -44,7 +45,8 @@ export const useRewards = (customerProfile: any, totalPoints: number, setTotalPo
             business_name
           )
         `)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .is('customer_profile_id', null); // Only get rewards not yet claimed
 
       if (error) {
         console.error('Error fetching rewards:', error);
@@ -55,11 +57,35 @@ export const useRewards = (customerProfile: any, totalPoints: number, setTotalPo
         id: reward.id,
         title: reward.title,
         points_required: reward.points_required,
-        business_name: reward.business_profiles.business_name,
+        business_name: reward.business_profiles?.business_name || 'Unknown Business',
         business_profile_id: reward.business_profile_id
       })) || [];
 
       setRewards(formattedRewards);
+
+      // Also fetch redemption history
+      const { data: redemptionData, error: redemptionError } = await supabase
+        .from('rewards')
+        .select(`
+          *,
+          business_profiles!inner(
+            business_name
+          )
+        `)
+        .eq('customer_profile_id', customerProfile.id)
+        .eq('reward_status', 'redeemed');
+
+      if (!redemptionError && redemptionData) {
+        const formattedRedemptions = redemptionData.map(redemption => ({
+          id: redemption.id,
+          reward_title: redemption.title,
+          business_name: redemption.business_profiles?.business_name || 'Unknown Business',
+          points_used: redemption.points_required,
+          redemption_date: redemption.reward_date || new Date().toISOString(),
+          status: redemption.reward_status
+        }));
+        setRedemptions(formattedRedemptions);
+      }
     } catch (error: any) {
       console.error('Error in fetchAvailableRewards:', error);
       setError(`Failed to load rewards: ${error.message}`);
@@ -72,12 +98,13 @@ export const useRewards = (customerProfile: any, totalPoints: number, setTotalPo
     if (!customerProfile) return;
 
     try {
-      // Simple redemption tracking
+      // Update reward to mark as redeemed
       const { error } = await supabase
         .from('rewards')
         .update({ 
           reward_status: 'redeemed',
-          customer_profile_id: customerProfile.id
+          customer_profile_id: customerProfile.id,
+          reward_date: new Date().toISOString()
         })
         .eq('id', rewardId);
 

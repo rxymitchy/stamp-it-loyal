@@ -251,6 +251,10 @@ export type Database = {
         Args: { customer_phone: string; business_uuid: string }
         Returns: number
       }
+      is_profile_owner: {
+        Args: { profile_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: "customer" | "business"

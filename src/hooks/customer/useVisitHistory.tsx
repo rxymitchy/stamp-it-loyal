@@ -24,6 +24,7 @@ export const useVisitHistory = (customerProfile: any) => {
 
     console.log('Fetching visit history for customer:', customerProfile.id);
     setLoading(true);
+    setError(null);
 
     try {
       // Get visits with business info
@@ -54,7 +55,7 @@ export const useVisitHistory = (customerProfile: any) => {
       const businessMap = new Map();
       visits?.forEach(visit => {
         const businessId = visit.business_profile_id;
-        const businessName = visit.business_profiles.business_name;
+        const businessName = visit.business_profiles?.business_name || 'Unknown Business';
         
         if (businessMap.has(businessId)) {
           businessMap.get(businessId).visit_count++;
