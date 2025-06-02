@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { LogOut, RefreshCw } from "lucide-react";
+import { LogOut, RefreshCw, Home } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useCustomerData } from "@/hooks/useCustomerData";
@@ -15,7 +15,7 @@ import LoyaltyCard from "@/components/customer/LoyaltyCard";
 import StampsDisplay from "@/components/customer/StampsDisplay";
 
 const CustomerDashboard = () => {
-  const { profile, signOut, loading: authLoading } = useAuth();
+  const { profile, signOut, loading: authLoading, error: authError } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
 
@@ -50,8 +50,12 @@ const CustomerDashboard = () => {
     refetch();
   };
 
+  const handleGoHome = () => {
+    navigate('/');
+  };
+
   // Show error state with retry option
-  if (error && !loading && !authLoading) {
+  if ((error || authError) && !loading && !authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
@@ -61,11 +65,15 @@ const CustomerDashboard = () => {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Dashboard Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{error || authError}</p>
           <div className="space-x-2">
             <Button onClick={handleRetry} className="bg-gradient-to-r from-purple-600 to-amber-600">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
+            </Button>
+            <Button variant="outline" onClick={handleGoHome}>
+              <Home className="h-4 w-4 mr-2" />
+              Go Home
             </Button>
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
@@ -85,6 +93,12 @@ const CustomerDashboard = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your dashboard...</p>
           <p className="text-sm text-gray-500 mt-2">This should only take a few seconds</p>
+          <div className="mt-4">
+            <Button variant="outline" onClick={handleGoHome} size="sm">
+              <Home className="h-4 w-4 mr-2" />
+              Go Home
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -99,10 +113,16 @@ const CustomerDashboard = () => {
             <h1 className="text-xl font-bold text-gray-800">
               Welcome, {customerProfile?.full_name || profile?.email?.split('@')[0] || 'Customer'}
             </h1>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleGoHome}>
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </div>
