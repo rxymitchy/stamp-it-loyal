@@ -19,6 +19,35 @@ const SignIn = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!email.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!password.trim()) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!email.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -31,11 +60,41 @@ const SignIn = () => {
 
       if (error) {
         console.error('Auth error:', error);
-        if (error.message.includes('Email not confirmed')) {
+        
+        // Handle specific auth errors with user-friendly messages
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Sign In Failed",
+            description: "The email or password you entered is incorrect. Please check your credentials and try again.",
+            variant: "destructive"
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email Not Verified",
+            description: "Please check your email and click the verification link before signing in.",
+            variant: "destructive"
+          });
           navigate('/email-verification', { state: { email } });
-          return;
+        } else if (error.message.includes('Too many requests')) {
+          toast({
+            title: "Too Many Attempts",
+            description: "Too many login attempts. Please wait a few minutes before trying again.",
+            variant: "destructive"
+          });
+        } else {
+          // Generic error for unknown issues
+          toast({
+            title: "Sign In Failed",
+            description: "An unexpected error occurred. Please try again later.",
+            variant: "destructive"
+          });
+          console.error('Detailed auth error:', {
+            message: error.message,
+            status: error.status,
+            details: error
+          });
         }
-        throw error;
+        return;
       }
 
       if (!data.user) {
@@ -53,14 +112,20 @@ const SignIn = () => {
 
       if (profileError) {
         console.error('Profile error:', profileError);
-        throw new Error('Failed to load user profile');
+        toast({
+          title: "Profile Error",
+          description: "Unable to load your profile. Please contact support if this continues.",
+          variant: "destructive"
+        });
+        await supabase.auth.signOut();
+        return;
       }
 
       if (profileData?.role !== role) {
         await supabase.auth.signOut();
         toast({
-          title: "Access Denied",
-          description: `This account is registered as a ${profileData?.role}. Please select the correct role.`,
+          title: "Wrong Account Type",
+          description: `This account is registered as a ${profileData?.role}. Please select the correct account type and try again.`,
           variant: "destructive"
         });
         return;
@@ -73,47 +138,14 @@ const SignIn = () => {
 
       navigate(role === 'business' ? '/business' : '/customer');
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      console.error('Unexpected sign in error:', error);
       toast({
         title: "Sign In Failed",
-        description: error.message || "An unexpected error occurred",
+        description: "An unexpected error occurred during sign in. Please try again.",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleTryAgain = () => {
-    // Clear form and reset state
-    setPassword("");
-    setLoading(false);
-    // Focus back to password field
-    document.getElementById('password')?.focus();
-  };
-
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
-      
-      // Clear form data
-      setEmail("");
-      setPassword("");
-      
-      // Navigate to home page
-      navigate("/");
-    } catch (error: any) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive"
-      });
     }
   };
 
@@ -140,9 +172,10 @@ const SignIn = () => {
         description: "Check your email for a password reset link.",
       });
     } catch (error: any) {
+      console.error('Password reset error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to send password reset email. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -171,6 +204,7 @@ const SignIn = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                placeholder="Enter your email"
               />
             </div>
 
@@ -183,6 +217,7 @@ const SignIn = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                placeholder="Enter your password"
               />
             </div>
 
@@ -193,28 +228,6 @@ const SignIn = () => {
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
-
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleTryAgain}
-                disabled={loading}
-                className="flex-1"
-              >
-                Try Again
-              </Button>
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSignOut}
-                disabled={loading}
-                className="flex-1"
-              >
-                Sign Out
-              </Button>
-            </div>
 
             <div className="text-center space-y-2">
               <Button

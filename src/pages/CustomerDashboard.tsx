@@ -11,6 +11,8 @@ import BusinessProgressList from "@/components/customer/BusinessProgressList";
 import RewardsCatalog from "@/components/customer/RewardsCatalog";
 import RedemptionHistory from "@/components/customer/RedemptionHistory";
 import CustomerProfile from "@/components/customer/CustomerProfile";
+import LoyaltyCard from "@/components/customer/LoyaltyCard";
+import StampsDisplay from "@/components/customer/StampsDisplay";
 
 const CustomerDashboard = () => {
   const { profile, signOut } = useAuth();
@@ -22,16 +24,23 @@ const CustomerDashboard = () => {
     businesses,
     rewards,
     redemptions,
+    stamps,
     totalVisits,
     totalPoints,
     loading,
     error,
     redeemReward,
+    claimReward,
     refetch
   } = useCustomerData(profile);
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   const handleRetry = () => {
@@ -99,6 +108,11 @@ const CustomerDashboard = () => {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            <LoyaltyCard 
+              customerName={customerProfile.full_name || 'Customer'}
+              stamps={stamps}
+              onClaimReward={claimReward}
+            />
             <CustomerStats 
               totalPoints={totalPoints}
               totalVisits={totalVisits}
@@ -106,6 +120,16 @@ const CustomerDashboard = () => {
               rewardsCount={redemptions.length}
             />
             <BusinessProgressList businesses={businesses} />
+          </div>
+        )}
+
+        {/* Stamps Tab */}
+        {activeTab === 'stamps' && (
+          <div className="space-y-6">
+            <StampsDisplay 
+              stamps={stamps}
+              onClaimReward={claimReward}
+            />
           </div>
         )}
 

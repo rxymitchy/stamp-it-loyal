@@ -1,9 +1,12 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessData } from "@/hooks/useBusinessData";
 import { useAdvancedBusinessData } from "@/hooks/useAdvancedBusinessData";
+import { useStampManagement } from "@/hooks/business/useStampManagement";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import BusinessSidebar from "@/components/business/sidebar/BusinessSidebar";
 import DashboardOverview from "@/components/business/dashboard/DashboardOverview";
 import CustomerManagement from "@/components/business/customers/CustomerManagement";
@@ -13,6 +16,7 @@ import BusinessSettings from "@/components/business/settings/BusinessSettings";
 
 const BusinessDashboard = () => {
   const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   
   const {
@@ -36,8 +40,16 @@ const BusinessDashboard = () => {
     refetch: refetchAdvanced
   } = useAdvancedBusinessData(businessProfile);
 
+  const { addStampToCustomer } = useStampManagement(businessProfile);
+
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('Business user signing out...');
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out error in BusinessDashboard:', error);
+    }
   };
 
   const handleRetry = () => {
@@ -119,6 +131,7 @@ const BusinessDashboard = () => {
             customers={customers}
             onSearchCustomer={handleSearchCustomer}
             onAddVisit={handleAddVisit}
+            onAddStamp={addStampToCustomer}
             onExportCustomers={() => exportCustomersCSV(customers)}
           />
         );

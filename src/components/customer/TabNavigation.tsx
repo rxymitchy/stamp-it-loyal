@@ -1,5 +1,7 @@
 
-import { TrendingUp, Gift, Star, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Home, Gift, History, User, Star } from "lucide-react";
 
 interface TabNavigationProps {
   activeTab: string;
@@ -8,29 +10,34 @@ interface TabNavigationProps {
 
 const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: TrendingUp },
+    { id: 'overview', label: 'Overview', icon: Home },
+    { id: 'stamps', label: 'Stamps', icon: Star },
     { id: 'rewards', label: 'Rewards', icon: Gift },
-    { id: 'history', label: 'History', icon: Star },
-    { id: 'profile', label: 'Profile', icon: User }
+    { id: 'history', label: 'History', icon: History },
+    { id: 'profile', label: 'Profile', icon: User },
   ];
 
   return (
-    <div className="flex space-x-1 mb-6 bg-white rounded-lg p-1">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onTabChange(tab.id)}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
-            activeTab === tab.id
-              ? 'bg-gradient-to-r from-purple-500 to-amber-500 text-white'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <tab.icon className="h-4 w-4" />
-          <span>{tab.label}</span>
-        </button>
-      ))}
-    </div>
+    <Card className="mb-6">
+      <CardContent className="p-2">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Button
+                key={tab.id}
+                variant={activeTab === tab.id ? "default" : "ghost"}
+                onClick={() => onTabChange(tab.id)}
+                className="flex items-center space-x-2"
+              >
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
