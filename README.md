@@ -7,7 +7,7 @@ StampIt is a modern digital loyalty rewards platform that replaces traditional p
 
 ## 🚀 Live Demo
 
-**URL**: https://lovable.dev/projects/1d65f560-ac25-4ca6-acae-06a8e0811ef5
+**URL**: https://preview--stamp-it-loyal.lovable.app/
 
 ## ✨ Features
 
@@ -192,7 +192,7 @@ This project is built with Lovable, an AI-powered development platform. Changes 
 3. **GitHub Codespaces**: Cloud-based development
 
 ### Making Changes via Lovable
-1. Visit the [Lovable Project](https://lovable.dev/projects/1d65f560-ac25-4ca6-acae-06a8e0811ef5)
+1. Visit the [Lovable Project](https://preview--stamp-it-loyal.lovable.app/)
 2. Use natural language prompts to request changes
 3. Changes are committed automatically
 
