@@ -10,7 +10,8 @@ export interface UserProfile {
   role: 'customer' | 'business';
 }
 
-const MAX_LOADING_TIME = 15000; // 15 seconds max loading time
+const MAX_LOADING_TIME = 10000; // 10 seconds max loading time
+const SESSION_CHECK_TIMEOUT = 5000; // 5 seconds for session check
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -47,16 +48,42 @@ export const useAuth = () => {
     }
   };
 
+  const clearSession = () => {
+    console.log('Clearing session data');
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setError(null);
+    localStorage.removeItem('app_version');
+    sessionStorage.clear();
+  };
+
+  const forceSignOut = async () => {
+    try {
+      console.log('Force signing out due to timeout or error');
+      await supabase.auth.signOut();
+      clearSession();
+      setLoading(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Error during force sign out:', error);
+      // Even if signOut fails, clear local state
+      clearSession();
+      setLoading(false);
+      navigate('/');
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     let loadingTimeout: NodeJS.Timeout;
+    let sessionTimeout: NodeJS.Timeout;
 
     // Set a maximum loading time to prevent infinite loading
     loadingTimeout = setTimeout(() => {
       if (mounted && loading) {
-        console.log('Loading timeout reached, stopping loading state');
-        setLoading(false);
-        setError('Loading timeout - please try refreshing the page');
+        console.log('Loading timeout reached, forcing logout');
+        forceSignOut();
       }
     }, MAX_LOADING_TIME);
 
@@ -66,6 +93,10 @@ export const useAuth = () => {
         console.log('Auth event:', event, session?.user?.id);
         
         if (!mounted) return;
+        
+        // Clear any existing timeouts when auth state changes
+        if (loadingTimeout) clearTimeout(loadingTimeout);
+        if (sessionTimeout) clearTimeout(sessionTimeout);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -83,22 +114,29 @@ export const useAuth = () => {
         
         if (mounted) {
           setLoading(false);
-          clearTimeout(loadingTimeout);
         }
       }
     );
 
-    // Check for existing session immediately
+    // Check for existing session with timeout
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Add a timeout to the session check
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => {
+          sessionTimeout = setTimeout(() => {
+            reject(new Error('Session check timeout'));
+          }, SESSION_CHECK_TIMEOUT);
+        });
+
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
+        if (sessionTimeout) clearTimeout(sessionTimeout);
         
         if (error) {
           console.error('Session error:', error);
           if (mounted) {
-            setLoading(false);
-            setError(`Session error: ${error.message}`);
-            clearTimeout(loadingTimeout);
+            forceSignOut();
           }
           return;
         }
@@ -117,14 +155,19 @@ export const useAuth = () => {
         
         if (mounted) {
           setLoading(false);
-          clearTimeout(loadingTimeout);
+          if (loadingTimeout) clearTimeout(loadingTimeout);
         }
       } catch (error: any) {
         console.error('Auth initialization error:', error);
         if (mounted) {
-          setLoading(false);
-          setError(`Initialization error: ${error.message}`);
-          clearTimeout(loadingTimeout);
+          if (error.message === 'Session check timeout') {
+            console.log('Session check timed out, forcing logout');
+            forceSignOut();
+          } else {
+            setLoading(false);
+            setError(`Initialization error: ${error.message}`);
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+          }
         }
       }
     };
@@ -133,7 +176,8 @@ export const useAuth = () => {
 
     return () => {
       mounted = false;
-      clearTimeout(loadingTimeout);
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+      if (sessionTimeout) clearTimeout(sessionTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -145,20 +189,16 @@ export const useAuth = () => {
       setError(null);
       
       await supabase.auth.signOut();
-      
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      
-      // Clear any stored app version to ensure fresh state
-      localStorage.removeItem('app_version');
-      sessionStorage.clear();
+      clearSession();
       
       console.log('Sign out successful, navigating to home');
       navigate('/');
     } catch (error: any) {
       console.error('Sign out error:', error);
+      // Even if signOut fails, clear local state and redirect
+      clearSession();
       setError(`Sign out failed: ${error.message}`);
+      navigate('/');
     } finally {
       setLoading(false);
     }
@@ -170,6 +210,7 @@ export const useAuth = () => {
     profile,
     loading,
     error,
-    signOut
+    signOut,
+    forceSignOut
   };
 };

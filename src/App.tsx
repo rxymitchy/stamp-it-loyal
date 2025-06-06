@@ -21,7 +21,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) => {
-  const { user, profile, loading, error, signOut } = useAuth();
+  const { user, profile, loading, error, forceSignOut } = useAuth();
   
   // Use session management hooks
   useSessionTimeout();
@@ -31,9 +31,9 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   useEffect(() => {
     if (error && !loading) {
       console.log('Auto-logout due to error:', error);
-      signOut();
+      forceSignOut();
     }
-  }, [error, loading, signOut]);
+  }, [error, loading, forceSignOut]);
   
   console.log('ProtectedRoute - Loading:', loading, 'User:', !!user, 'Profile:', profile, 'Error:', error);
   
@@ -49,13 +49,9 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
     );
   }
   
-  if (error) {
+  if (error || !user || !profile) {
+    console.log('Redirecting to home - Error, no user, or no profile');
     return <Navigate to="/" replace />;
-  }
-  
-  if (!user || !profile) {
-    console.log('Redirecting to signin - No user or profile');
-    return <Navigate to="/signin" replace />;
   }
   
   if (requiredRole && profile.role !== requiredRole) {
@@ -67,40 +63,33 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 };
 
 const AppRoutes = () => {
-  const { user, profile, loading, error, signOut } = useAuth();
+  const { user, profile, loading, error, forceSignOut } = useAuth();
 
   // Auto-logout on error
   useEffect(() => {
     if (error && !loading) {
       console.log('Auto-logout due to error:', error);
-      signOut();
+      forceSignOut();
     }
-  }, [error, loading, signOut]);
+  }, [error, loading, forceSignOut]);
   
   console.log('AppRoutes - Loading:', loading, 'User:', !!user, 'Profile:', profile, 'Error:', error);
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-amber-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-          <p className="text-sm text-gray-500 mt-2">Initializing application</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <Routes>
       <Route 
         path="/" 
         element={
-          user && profile ? (
+          // Always allow access to homepage, but redirect if authenticated
+          loading ? (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-amber-50">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+                <p className="text-sm text-gray-500 mt-2">Initializing application</p>
+              </div>
+            </div>
+          ) : user && profile && !error ? (
             <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
           ) : (
             <Index />
@@ -110,7 +99,7 @@ const AppRoutes = () => {
       <Route 
         path="/signin" 
         element={
-          user && profile ? (
+          user && profile && !error && !loading ? (
             <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
           ) : (
             <SignIn />
@@ -120,7 +109,7 @@ const AppRoutes = () => {
       <Route 
         path="/signup" 
         element={
-          user && profile ? (
+          user && profile && !error && !loading ? (
             <Navigate to={profile.role === 'business' ? '/business' : '/customer'} replace />
           ) : (
             <SignUp />

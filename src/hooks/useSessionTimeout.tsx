@@ -6,7 +6,7 @@ const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 const WARNING_TIME = 2 * 60 * 1000; // Show warning 2 minutes before timeout
 
 export const useSessionTimeout = () => {
-  const { signOut, user } = useAuth();
+  const { forceSignOut, user } = useAuth();
   const timeoutRef = useRef<NodeJS.Timeout>();
   const warningTimeoutRef = useRef<NodeJS.Timeout>();
   const lastActivityRef = useRef<number>(Date.now());
@@ -32,9 +32,9 @@ export const useSessionTimeout = () => {
     // Set session timeout
     timeoutRef.current = setTimeout(async () => {
       console.log('Session expired due to inactivity');
-      await signOut();
+      await forceSignOut();
     }, SESSION_TIMEOUT);
-  }, [user, signOut]);
+  }, [user, forceSignOut]);
 
   useEffect(() => {
     if (!user) return;

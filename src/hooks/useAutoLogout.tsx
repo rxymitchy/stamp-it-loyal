@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAuth } from './useAuth';
 
 export const useAutoLogout = () => {
-  const { signOut, user } = useAuth();
+  const { forceSignOut, user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
@@ -34,7 +34,7 @@ export const useAutoLogout = () => {
           console.log('App update detected, logging out for fresh state');
           sessionStorage.removeItem('page_refreshing');
           localStorage.setItem('app_version', currentVersion);
-          await signOut();
+          await forceSignOut();
         }
       }
     };
@@ -53,5 +53,5 @@ export const useAutoLogout = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, signOut]);
+  }, [user, forceSignOut]);
 };
