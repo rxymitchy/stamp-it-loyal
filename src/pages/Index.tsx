@@ -2,9 +2,25 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, Gift, Star, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 const Index = () => {
+  const { user, profile, loading, error } = useAuth();
+  const navigate = useNavigate();
+
+  // Auto-redirect authenticated users, but don't block the page
+  useEffect(() => {
+    if (!loading && user && profile && !error) {
+      const timer = setTimeout(() => {
+        navigate(profile.role === 'business' ? '/business' : '/customer', { replace: true });
+      }, 100); // Small delay to ensure smooth transition
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, user, profile, error, navigate]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50">
       {/* Header */}
