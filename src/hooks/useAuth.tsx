@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 export interface UserProfile {
   id: string;
@@ -33,6 +34,33 @@ export const useAuth = () => {
       
       if (error) {
         console.error('Profile fetch error:', error);
+        
+        // If profile doesn't exist, create it based on user metadata
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, creating default profile');
+          const { data: userData } = await supabase.auth.getUser();
+          const userRole = userData.user?.user_metadata?.role || 'customer';
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: userData.user?.email || '',
+              role: userRole
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            throw createError;
+          }
+          
+          setProfile(newProfile);
+          setError(null);
+          return;
+        }
+        
         throw error;
       }
       
@@ -102,6 +130,19 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Check if user's email is confirmed
+          if (!session.user.email_confirmed_at) {
+            console.log('User email not confirmed');
+            toast({
+              title: "Email Verification Required",
+              description: "Please check your email and click the verification link to complete your registration.",
+              variant: "destructive"
+            });
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+          
           try {
             await fetchProfile(session.user.id);
           } catch (error) {
@@ -144,6 +185,14 @@ export const useAuth = () => {
         if (!mounted) return;
         
         if (session?.user) {
+          // Check if user's email is confirmed
+          if (!session.user.email_confirmed_at) {
+            console.log('Existing session but email not confirmed');
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+          
           setSession(session);
           setUser(session.user);
           try {

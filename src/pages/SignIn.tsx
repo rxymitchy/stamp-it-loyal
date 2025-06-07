@@ -17,6 +17,29 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleResendVerification = async (userEmail: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your email for a new verification link.",
+      });
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification email. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -71,10 +94,14 @@ const SignIn = () => {
         } else if (error.message.includes('Email not confirmed')) {
           toast({
             title: "Email Not Verified",
-            description: "Please check your email and click the verification link before signing in.",
-            variant: "destructive"
+            description: "Your email address hasn't been verified. Would you like us to send a new verification link?",
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => handleResendVerification(email)}>
+                Resend Link
+              </Button>
+            ),
           });
-          navigate('/email-verification', { state: { email } });
         } else if (error.message.includes('Too many requests')) {
           toast({
             title: "Too Many Attempts",
@@ -108,9 +135,9 @@ const SignIn = () => {
         .from('profiles')
         .select('role')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) {
+      if (profileError && profileError.code !== 'PGRST116') {
         console.error('Profile error:', profileError);
         toast({
           title: "Profile Error",
@@ -121,11 +148,32 @@ const SignIn = () => {
         return;
       }
 
-      if (profileData?.role !== role) {
+      // If no profile exists, create one
+      if (!profileData) {
+        console.log('No profile found, creating one...');
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email || '',
+            role: role
+          });
+
+        if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
+          toast({
+            title: "Profile Creation Error",
+            description: "Failed to create your profile. Please try again.",
+            variant: "destructive"
+          });
+          await supabase.auth.signOut();
+          return;
+        }
+      } else if (profileData.role !== role) {
         await supabase.auth.signOut();
         toast({
           title: "Wrong Account Type",
-          description: `This account is registered as a ${profileData?.role}. Please select the correct account type and try again.`,
+          description: `This account is registered as a ${profileData.role}. Please select the correct account type and try again.`,
           variant: "destructive"
         });
         return;
